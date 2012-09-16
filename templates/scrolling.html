@@ -1,0 +1,604 @@
+<html>
+<head>
+<title>Scrolling Cards</title>
+<script src="http://code.jquery.com/jquery-1.8.1.min.js"></script>
+<script type="text/javascript">
+round_id = {{ round_id }};
+jQuery.fn.center = function () {
+    this.css("position","absolute");
+    this.css("bottom", "1px");// Math.max(0, (($(window).height() - this.outerHeight()) / 2) +
+    //                   $(window).scrollTop()) + "px");
+    this.css("left", Math.max(0, (($(window).width() - this.outerWidth()) / 2) +
+            $(window).scrollLeft()) + "px");
+    return this;
+}
+
+function matrix_rot(theta,scale,x,y){
+    return "matrix(" + scale*Math.cos(theta) + "," + (-scale*Math.sin(theta))  + "," + (scale*Math.sin(theta))  + "," + (scale*Math.cos(theta)) + ","+x+","+y+")"
+}
+
+function whites(w){
+    var i = 0;
+    var s = '<div class="cards white">';
+    for (i=0;i<w.length;i++){
+        s += '<div class="card" cid="' + w[i][0] +'"><div class="icons">'+w[i][2]+'</div></div>';
+    }
+    return s+'</div>';
+}
+
+still_generating1 = false;
+still_generating2 = false;
+generated_w = {{ cards|safe }};
+generated_b = {{ bc|safe }};
+function generate(){
+    $.get("/cah/wcards/",function(data){
+        still_generating1 = false;
+        generated_w = data;
+    },'json');
+    $.get("/cah/newround/",function(data){
+        still_generating2 = false;
+        round_id = data['round_id'];
+        generated_b = data['bc'];
+    },'json');
+    while (still_generating1 && still_generating2);
+    console.log("asdf",generated_w,generated_b,round_id)
+    still_generating1 = true;
+    still_generating2 = true;
+    var c = '<div class="player-cards"><div class="cards black" rid="' +round_id +'"><div class="card"><div class="icons">'+generated_b[2]+'</div></div></div>' + whites(generated_w) + '</div>';
+    return c;//'<div id="round" class="player-cards">				<div class="cards black">					<div class="card" style="">						<div class="icons">							What dont you want to find in your Chinese Food?						</div>											</div>				</div>				<div class="cards white">					<div class="card">						<div class="icons">						A middle aged man on roller skates						</div>					</div>										<div class="card">						<div class="icons">						Third Base.						</div>					</div>										<div class="card">						<div class="icons">						Eugenics						</div>					</div>										<div class="card">						<div class="icons">						Geese						</div>					</div>										<div class="card">						<div class="icons">						YOU MUST CONSTRUCT ADDITIONAL PYLONS						</div>					</div>										<div class="card">						<div class="icons">						Hope.						</div>					</div>										<div class="card">						<div class="icons">						Hope.						</div>					</div>										<div class="card">						<div class="icons">						Hope.						</div>					</div>					<div class="card">						<div class="icons">						Hope.						</div>					</div>				</div>			</div>';
+}
+
+rounds = 0;
+list_of_used = [];
+current_set = 0;
+function change_view(){
+    i = list_of_used.length - current_set;
+
+
+
+    if (i < 0 || i >= list_of_used.length){
+        for (k = 0; k < list_of_used.length; k++){
+            var y = list_of_used[k];
+
+
+
+            y[0].css({'opacity':y[3]});
+            y[0].css("bottom",y[4]+"px");
+            y[0].css("-webkit-transform",matrix_rot(y[1],y[2],-3,-30));
+            y[0].css("-moz-transform",matrix_rot(y[1],y[2],-3,-30));
+
+
+            if (y > 3){
+                break;
+            }
+
+        }
+
+        $("#playground").css('webkit-transform', 'scale(1)');
+        $("#playground").animate({'bottom':-10});
+        $("#round").css("opacity",1);
+        return;
+    }
+    console.log(matrix_rot(list_of_used[i][1],list_of_used[i][2]));
+    $("#playground").css('webkit-transform', matrix_rot(-list_of_used[i][1],1/list_of_used[i][2],-30,-3));//1/(1 - 0.15*current_set)));
+    $("#playground").animate({'bottom':-list_of_used[i][4]});
+    $(".inactive, #round").css('opacity',0.2);
+    list_of_used[i][0].css('opacity',1);
+}
+
+function unfocus(t,z){
+    x = $(t).parent().parent();
+    x.attr("id","");
+    x.attr("class","player-cards inactive");
+    x.find('.black .card').click(function(){
+        //console.log(this);
+        var parent = $(this).parent().parent();
+        if (parent.css('opacity') < 1){
+            parent.css('opacity',1);
+        } else {
+            for (i = 0; i < list_of_used.length; i++){
+                var y = list_of_used[i];
+
+
+                if (y[0][0] == parent[0]){
+
+                    y[0].css({'opacity':y[3]});
+                    y[0].css("bottom",y[4]+"px");
+                    y[0].css("-webkit-transform",matrix_rot(y[1],y[2],-3,-30));
+                    y[0].css("-moz-transform",matrix_rot(y[1],y[2],-3,-30));
+                    break;
+                }
+
+                if (y > 3){
+                    break;
+                }
+
+            }
+        }
+
+    });
+    $(t).unbind('click').unbind('mouseover').unbind('mouseout');
+    $(t).siblings().unbind('click');
+    list_of_used.push([x,0,1,1,0,10]);
+    var j = 0;
+    for (i = 0; i < list_of_used.length; i++){
+        var y = list_of_used[i];
+        y[1] = y[1] + 0.15-0.3*Math.random();
+        y[2] = y[2]-0.15;
+        y[3] = y[3]/1.3;
+        y[4] = y[4] + 100;
+
+        y[0].css({'opacity':y[3]});
+        y[0].css("bottom",y[4]+"px");
+        y[0].css("-webkit-transform",matrix_rot(y[1],y[2],-3,-30));
+        y[0].css("-moz-transform",matrix_rot(y[1],y[2],-3,-30));
+        //y[0].fadeTo(100,y[3]);
+        j++;
+        if (i > 3){
+            list_of_used.reverse();
+            y = list_of_used.pop();
+            list_of_used.reverse();
+            y[0].css("display","none");
+        }
+
+    }
+
+
+
+    z.attr("id","round");
+    //z.css("opacity","0");
+    z.insertAfter(x);
+}
+
+function add_wait_icon(s){
+    var wait = $("<center><img class='wait' src='http://i.imgur.com/sFUKd.gif'></img></center>");
+    wait.appendTo(s);
+    return wait;
+}
+
+function new_stuff(){
+    $("#rounds_completed span").text(rounds);
+    $("#round").center();
+    $("#round .white .card").each(function() {$(this).css("-webkit-transform","rotate("+ (7.5-Math.random()*15) +"deg)");});
+    $("#round .white .card").each(function() {$(this).css("-moz-transform","rotate("+ (7.5-Math.random()*15) +"deg)");});
+
+    $("#round .white .card:not(.active)").click(function(){
+        rounds++;
+        $(this).css("background-color","#feed72");
+        $(this).addClass('active');
+        $(this).css("-webkit-transform","rotate("+ (7.5-Math.random()*15) +"deg)");
+        $(this).unbind('click');
+        x = $(this).parent().parent();
+        x.attr("id","");
+
+        var wait = add_wait_icon($(this));
+
+        var rid = round_id;
+        // write feed back loop
+//        $.post(
+//                "/cah/tvote/"+rid+"/",
+//                {"cid":$(this).attr('cid')},
+//                function(data){
+//                    console.log(data);
+//                },
+//                'json'
+//        )
+        var cid = $(this).attr('cid');
+        console.log($(this));
+        $.ajax({
+            url: "/cah/tvote/"+rid+"/",
+            data: {"cid":cid},
+            success: function(data){
+                console.log("abc",data);
+            },
+            dataType: 'json'
+        });
+
+        z = $(generate());
+        var t = this;
+        //unfocus(this,z);
+        //z.slideDown();
+
+        var anon = function() {wait.detach();//fold(x);
+            unfocus(t,z);
+            new_stuff();
+        };
+        setTimeout(anon, 100);
+        //var y = x.find('.active').detach();
+        //y.insertAfter(x.find('.white:last-child .card:last-child'));
+
+
+        change_view();
+    }).mouseover(function(){
+                $(this).css("-webkit-transform",'scale(1.2)');
+            }).mouseout(function(){
+                $(this).css("-webkit-transform","rotate("+ (7.5-Math.random()*15) +"deg)");
+            });
+}
+
+function fold(set){
+    var i = 0;
+    orig = [];
+    var y = set.find('.active').detach();
+    y.insertBefore(set.find('.white:last-child .card:first-child'));
+    set.find(".white:last-child .card:not(.active)").each(
+            function(){
+                //$(this).animate({'left':-i*($(this).width()+20)});
+                $(this).css({"position":"absolute","left":240});
+                orig[i] = -(i)*($(this).width()+20);
+                i++;
+            }
+    );
+
+    var j = 0;
+    set.find('.active').click(function(){
+        var i = 0;
+        k = $(this).parent().parent()
+        if (j%2 == 0){
+            $(this).parent().find('.card:not(.active)').each(function(){
+                //$(this).animate({'left':$(this).width()+20},50);
+                $(this).css({"position":"relative","left":0});
+                i++;
+            });
+
+            if (k.find('.white').length >= 2){
+                k.find('.white:last-child').css('display','none');
+            }
+        } else {
+            $(this).parent().find('.card:not(.active)').each(function(){
+                //$(this).animate({'left':orig[i]},50);
+                $(this).css({"position":"absolute","left":240});
+                i++;
+            });
+            if (k.find('.white').length >= 2){
+                k.find('.white:last-child').css('display','block');
+            }
+        }
+        j++;
+    });
+
+}
+
+function expand(set){
+    set.find(".white .card").each(
+            function(){
+                $(this).css("position","relative").animate({'left':0});
+            }
+    );
+    set.find('.active').unbind('mouseover').unbind('mouseout');
+}
+
+function populate(set, card){
+    if (set.find('.white').length < 2){
+        $('<div class="cards white"> </div>').insertAfter(set.find('.white'));
+    }
+    card.css("-webkit-transform","rotate("+ (7.5-Math.random()*15) +"deg)");
+    card.css("-moz-transform","rotate("+ (7.5-Math.random()*15) +"deg)");
+
+
+    card.appendTo(set.find('.white:last-child'));
+}
+
+$(document).ready(function(){
+    new_stuff();
+
+    setInterval(function(){
+        // poll
+        $.get(
+            '/cah/ping/'+round_id+'/'
+                ,{},function(data){
+            console.log("log",data);
+        },'json'
+
+        );
+    },5000)
+
+    $(document).keyup(function(e) {
+        if (e.keyCode == 38){
+            // up
+            if (current_set < list_of_used.length){
+                current_set++;
+                change_view();
+            }
+        } else if (e.keyCode == 40){
+            if (current_set > 0){
+                current_set--;
+                change_view();
+            }
+        }
+    });
+});
+</script>
+<style type="text/css">
+* {
+    margin: 0;
+    padding: 0;
+}
+body,
+html {
+    width: 100%;
+    height: 100%;
+    -webkit-font-smoothing: antialiased;
+    background-color: #0f2d40;
+    background-image: -webkit-gradient(radial,50% 50%,0,50% 50%,560,from(#0f2d40),to(#295769));
+    background-image: -webkit-radial-gradient(center center,ellipse farthest-corner,#3e8c84,#0f2d40);
+    background-image: -moz-radial-gradient(center center,ellipse farthest-corner,#65981e,#184d08);
+    background-image: -ms-radial-gradient(center center,ellipse farthest-corner,#65981e,#184d08);
+    overflow: hidden;
+}
+.desactivate { opacity: .2 }
+#playground {
+
+    overflow: hidden;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    min-height: 480px;
+    font: 400 16px/1.4 "futura-pt",Helvetica,Arial,sans-serif;
+
+    -webkit-transition: all 550ms ease-out;
+    -moz-transition: all 550ms ease-out;
+
+    z-index: 1;
+}
+#playground h1 {
+    font: 5em/1.5 "bello-pro","Cooper STD",Georgia,serif;
+    margin: 5% auto;
+    text-align: center;
+    color: #2b5204;
+    text-shadow: 0 -1px 3px rgba(0,0,0,0.2),0 -1px 0 rgba(0,0,0,0.3),0 1px 0 rgba(152,184,42,0.15),0 1px 4px rgba(152,184,42,0.2);
+    text-align: center;
+    -webkit-mask-image: -webkit-gradient(linear,left top,left bottom,from(rgba(0,0,0,0.4)),to(white));
+    -webkit-background-clip: text;
+}
+#playground .shortcut {
+    display: block;
+    padding: 1em 0;
+    color: #77a421;
+    font-size: .65em;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+#playground #ui {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    width: 75%;
+    max-width: 1280px;
+    height: 30%;
+    max-height: 300px;
+    margin: -6.5% 0 0 0;
+    clear: both;
+    color: #dce4c9;
+}
+#playground #ui .total {
+    position: relative;
+    left: -12.5%;
+    background-color: #809d29;
+    background-color: rgba(208,209,78,0.3);
+    width: 25%;
+    padding: .75em 0 .5em 0;
+    color: #437714;
+    font-size: 1em;
+    letter-spacing: .15em;
+    text-align: center;
+    text-transform: uppercase;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.1);
+    -ms-border-radius: 9px 9px 0 0;
+    border-radius: 9px 9px 0 0;
+}
+
+#playground .player-cards,
+#playground #dealer-cards {
+    position: absolute;
+    -left: 50%;
+    width: 100%;
+    -height: 460px;
+    --webkit-transform: translate3d(0,0,0);
+    -webkit-transition: all 550ms ease-out;
+    -moz-transition: all 550ms ease-out;
+}
+
+#playground #round.player-cards .card{
+    -webkit-transition: all 250ms ease-in-out;
+    -moz-transition: all 250ms ease-in-out;
+}
+
+#playground .player-cards .card,
+#playground #dealer-cards .card {
+    -webkit-backface-visibility: hidden;
+    background-color: #f9f9f9;
+    -position: absolute;
+    -top: 0;
+    -left: 0;
+
+    --webkit-box-shadow: inset 0 0 1px white,inset 0 0 60px rgba(139,118,109,0.1),0 1px 3px rgba(0,0,15,0.3),0 0 5px rgba(0,0,15,0.1);
+    --ms-box-shadow: inset 0 0 1px white,inset 0 0 60px rgba(139,118,109,0.1),0 1px 3px rgba(0,0,15,0.3),0 0 5px rgba(0,0,15,0.1);
+    -box-shadow: inset 0 0 2px white,inset 0 0 60px rgba(139,118,109,0.1),0 1px 3px rgba(0,0,15,0.3),0 0 5px rgba(0,0,15,0.1);
+}
+#playground .player-cards .card.back,
+#playground #dealer-cards .card.back {
+    background-color: #fd4000;
+    background: #fd4000 url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAKCAYAAACJxx+AAAAATElEQVQYGWP4/9XN+P///wy4MEQClyKgOEInuiIoH6EAZA1MEYwGiqEqQFYEdRcTAwFAUAGqFTC7YTSKG5AEwWEC5UNMQJeEOhDkKwDfGrdliFgHkAAAAABJRU5ErkJggg==");
+}
+#playground #dealer-cards .card>.icons {
+    -webkit-transform: rotate(180deg);
+    -moz-transform: rotate(180deg);
+}
+#playground .player-cards { bottom: 30px }
+
+.card.active{
+    z-index:100;
+    cursor:pointer;
+}
+
+.card{
+    background-image: url('http://cardsagainsthumanity.com/img/icon_w.png');
+    background-repeat:no-repeat;
+    background-origin:content-box;
+    background-position:center bottom;
+}
+
+.card {
+    font-size: 1em;
+    z-index: 1;
+    position: relative;
+    float:left;
+    width: 110px;
+    height: 170px;
+    border-radius: 10px;
+    margin:10px;
+    margin-right:-30px;
+    padding:20px;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    opacity:0.98;
+    box-shadow: 1px 1px 8px rgba(15,43,64,0.5);
+}
+
+.black .card{
+    margin-right:30px;
+    margin-left:50px;
+    box-shadow: 3px 3px 8px #000;
+    background-image: url('http://cardsagainsthumanity.com/img/icon_b.png');
+}
+
+.card div { -position: absolute }
+.card div:first-child {
+    top: 2%;
+    left: 5%;
+}
+
+.card div .icons>div { position: relative }
+    /*.card .icons {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+    }*/
+.card{
+    span: 5px;
+    vertical-align:middle;
+}
+
+.black .card{
+    background-color:#000 !important;
+    color:#eee;
+}
+
+#round{
+    position:absolute;
+    -top:50%;
+    margin:0px auto;
+    -width:70%;
+}
+
+#round .card, .black .card{
+    cursor: pointer;
+}
+
+#header{
+    position:absolute;
+    left:0;
+    width:100%;
+    height:260px;
+    background-color:#000000;
+
+    background-repeat:no-repeat;
+    background-origin:content-box;
+    background-position:center top;
+    padding:10px;
+    margin-bottom:10px;
+
+    -background-image: -webkit-gradient(radial,50% 50%,0,50% 50%,560,from(#2),to(#000));
+    -background-image: -webkit-radial-gradient(center center,ellipse farthest-corner,#222,#000);
+
+    background-image: url('http://cardsagainsthumanity.com/img/logo.png');
+    opacity:0.3;
+
+    border-bottom:3px solid #132;
+
+    box-shadow: 0 0 10px #111;
+    z-index: 0;
+}
+
+</style>
+</head>
+<body>
+<!-- 		<div id="header" style="">
+
+			</div> -->
+
+<div id="rounds_completed" style="text-shadow:0 0 5px #abb;position:absolute;top:25px;left:50px;font-size:3em;z-index:10;color:#fff;text-align:center;font:400 16px/1.4 "futura-pt",Helvetica,Arial,sans-serif;">
+<p style="font-size:0.3em;">Rounds Completed:</p>
+<span>0</span>
+</div>
+
+<div id="playground">
+    <div id="round" class="player-cards">
+        <div class="cards black">
+            <div class="card" style="">
+                <div class="icons">
+                    What don't you want to find in your Chinese Food?
+                </div>
+
+            </div>
+        </div>
+        <div class="cards white">
+            <div class="card">
+                <div class="icons">
+                    A middle aged man on roller skates
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="icons">
+                    Third Base.
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="icons">
+                    Eugenics
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="icons">
+                    Geese
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="icons">
+                    YOU MUST CONSTRUCT ADDITIONAL PYLONS
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="icons">
+                    Hope.
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="icons">
+                    Hope.
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="icons">
+                    Hope.
+                </div>
+            </div>
+            <div class="card">
+                <div class="icons">
+                    Hope.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

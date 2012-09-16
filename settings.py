@@ -1,5 +1,5 @@
-# Django settings for outofcontext project.
-
+# Django settings for cardsagainsthumanity project.
+import os
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
@@ -11,8 +11,8 @@ MANAGERS = ADMINS
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.', # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': '',                      # Or path to database file if using sqlite3.
+        'ENGINE': 'django.db.backends.sqlite3', # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
+        'NAME': 'data',                      # Or path to database file if using sqlite3.
         'USER': '',                      # Not used with sqlite3.
         'PASSWORD': '',                  # Not used with sqlite3.
         'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
@@ -83,7 +83,7 @@ STATICFILES_FINDERS = (
 )
 
 # Make this unique, and don't share it with anybody.
-SECRET_KEY = 'alvd-ofskof!z5)hfz&x8a&!g*g$bkyyoe66=)a7vvbz!j^by)'
+SECRET_KEY = 'jq8n9&ebyg%t#@en(su9dyya#)k#5j9q6^ev13-j8q3^9$eq^i'
 
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (
@@ -100,14 +100,16 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
 )
 
-ROOT_URLCONF = 'outofcontext.urls'
+ROOT_URLCONF = 'cardsagainsthumanity.urls'
 
-TEMPLATE_DIRS = (
-    # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
-    # Always use forward slashes, even on Windows.
-    # Don't forget to use absolute paths, not relative paths.
-)
+TEMPLATE_DIRS = ('C:/Users/Lee/PycharmProjects/cardsagainsthumanity/templates',os.path.abspath("./templates"))
 
+LOGIN_REDIRECT_URL = "/"
+AUTHENTICATION_BACKENDS = ('facebook.backend.FacebookBackend', 'django.contrib.auth.backends.ModelBackend')
+AUTH_PROFILE_MODULE = 'facebook.FacebookProfile'
+FACEBOOK_APP_ID = '267777723263899'#os.environ['FACEBOOK_APP_ID']
+FACEBOOK_APP_SECRET = '30f7d726f90b26b91c9890c9f3fdc252'#os.environ['FACEBOOK_APP_SECRET']
+FACEBOOK_SCOPE = 'email,publish_stream'
 INSTALLED_APPS = (
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -116,9 +118,11 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # Uncomment the next line to enable the admin:
-    # 'django.contrib.admin',
+    'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
     # 'django.contrib.admindocs',
+    'cardsagainsthumanity.cah',
+    'facebook'
 )
 
 # A sample logging configuration. The only tangible logging

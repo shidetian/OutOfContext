@@ -1,0 +1,311 @@
+<html>
+<head>
+<title>Scrolling Cards</title>
+<script src="http://code.jquery.com/jquery-1.8.1.min.js"></script>
+<script src="http://d3js.org/d3.v2.js"></script>
+<script type="text/javascript">
+    timestamp = 0;
+    records = [];
+    rounds = {};
+
+    function pcs(black, white){
+        return '<div class="player-cards"><div class="card black" style=""><div class="icons">'+black+'</div></div><div class="card"><div class="icons">'+white+'</div></div></div>';
+    }
+
+    function poll(){
+        $.ajax({
+            type: 'GET',
+            url: "/cah/record/"+0+"/",
+            success: function(data){
+                if (data['error'] == undefined){
+                    $('.player-cards').detach();
+                    var i = 0;
+                    for (i = 0; i < data['rounds'].length; i++){
+                        var round = data['rounds'][i];
+                        records.push(round[0]);
+                        if (round[2] != undefined){
+                            var b = round[2][0][1][2];
+                            var w = round[2][0][2][2];
+                            rounds[round[0]] = insert_round($(pcs(b,w)),Math.random())
+                        }
+
+                        console.log(round);
+                    }
+                }
+                setTimeout(poll,1000);
+            },
+            dataType: 'json'
+        });
+        timestamp = new Date().getTime()/1000;
+    }
+
+    $(document).ready(function(){
+        $(".card:not(.active, .black)").each(function() {$(this).css("-webkit-transform","rotate("+ (7.5-Math.random()*15) +"deg)").css("-moz-transform","rotate("+ (7.5-Math.random()*15) +"deg)").addClass('active');}).mouseover(function(){
+            $(this).css("-webkit-transform","scale(1.2)");
+        }).mouseout(function(){
+                    $(this).css("-webkit-transform","rotate("+ (7.5-Math.random()*15) +"deg)")
+                });
+
+        $('.player-cards').each(function(){
+            var vis = $(create_chart(this, Math.random())[0]).parent();
+            vis.css("opacity",0.5).css({"left":20,"position":"relative"});
+        });
+        poll();
+
+//        setInterval(function(){
+//            // go through records
+//            var i = 0;
+//            $.get("/cah/info/"+Math.floor(timestamp)+"/",{"rounds":records.join(',')},function(data){
+//                console.log(data);
+//            }, 'json');
+//        }, 5000)
+    });
+
+    function insert_round(round,num){
+        round.find('.card:not(.active, .black)').each(function() {$(this).css("-webkit-transform","rotate("+ (7.5-Math.random()*15) +"deg)").css("-moz-transform","rotate("+ (7.5-Math.random()*15) +"deg)").addClass('active');}).mouseover(function(){
+            $(this).css("-webkit-transform","scale(1.2)");
+        }).mouseout(function(){
+                    $(this).css("-webkit-transform","rotate("+ (7.5-Math.random()*15) +"deg)")
+                });
+
+
+        round.appendTo($('body'));
+
+        var vis = $(create_chart(round[0], num)[0]).parent();
+        vis.css("opacity",0.5).css({"left":20,"position":"relative"});
+        return round;
+    }
+
+    function create_chart(node, val){
+        var w = 100,                        //width
+                h = 100,                            //height
+                r = 33,                            //radius
+                color = d3.scale.ordinal()
+                        .range(["#0f2d40", "#000"]);     //builtin range of colors
+
+        data = [{"label":"", "value":val*100},
+            {"label":"", "value":100-val*100}];
+
+        var vis = d3.select(node)
+                .append("svg:svg")              //create the SVG element inside the <body>
+                .data([data])                   //associate our data with the document
+                .attr("width", w)           //set the width and height of our visualization (these will be attributes of the <svg> tag
+                .attr("height", h)
+                .append("svg:g")                //make a group to hold our pie chart
+                .attr("transform", "translate(" + r + "," + r + ")")    //move the center of the pie chart from 0, 0 to radius, radius
+
+        var arc = d3.svg.arc()              //this will create <path> elements for us using arc data
+                .outerRadius(r);
+
+        var pie = d3.layout.pie()           //this will create arc data for us given a list of values
+                .value(function(d) { return d.value; });    //we must tell it out to access the value of each element in our data array
+
+        var arcs = vis.selectAll("g.slice")     //this selects all <g> elements with class slice (there aren't any yet)
+                .data(pie)                          //associate the generated pie data (an array of arcs, each having startAngle, endAngle and value properties)
+                .enter()                            //this will create <g> elements for every "extra" data element that should be associated with a selection. The result is creating a <g> for every object in the data array
+                .append("svg:g")                //create a group to hold each slice (we will have a <path> and a <text> element associated with each slice)
+                .attr("class", "slice");    //allow us to style things in the slices (like text)
+
+        arcs.append("svg:path")
+                .attr("fill", function(d, i) { return color(i); } ) //set the color for each slice to be chosen from the color function defined above
+                .attr("d", arc);                                    //this creates the actual SVG path using the associated data (pie) with the arc drawing function
+
+        arcs.append("svg:text")                                     //add a label to each slice
+                .attr("transform", function(d) {                    //set the label's origin to the center of the arc
+                    //we have to make sure to set these before calling arc.centroid
+                    d.innerRadius = 0;
+                    d.outerRadius = r;
+                    return "translate(" + arc.centroid(d) + ")";        //this gives us a pair of coordinates like [50, 50]
+                })
+                .attr("text-anchor", "middle")                          //center the text on it's origin
+                .text(function(d, i) { return data[i].label; });        //get the label from our original data array
+        return vis;
+    }
+</script>
+<style type="text/css">
+    * {
+        margin: 0;
+        padding: 0;
+    }
+    body,
+    html {
+        width: 100%;
+        height: 100%;
+        -webkit-font-smoothing: antialiased;
+        background-color: #0f2d40;
+        background-image: -webkit-gradient(radial,50% 50%,0,50% 50%,560,from(#65981e),to(#184d08));
+        background-image: -webkit-radial-gradient(center center,ellipse farthest-corner,#65981e,#184d08);
+        background-image: -moz-radial-gradient(center center,ellipse farthest-corner,#65981e,#184d08);
+        background-image: -ms-radial-gradient(center center,ellipse farthest-corner,#65981e,#184d08);
+        background-attachment:fixed;
+        -overflow: hidden;
+    }
+    .desactivate { opacity: .2 }
+
+    .player-cards{
+        -position: absolute;
+        left: 0%;
+        width: 400px;
+        height: 160px;
+        margin:10px;
+        margin-left:auto;
+        margin-right:auto;
+        --webkit-transform: translate3d(0,0,0);
+        -webkit-transition: all 550ms ease-out;
+        -moz-transition: all 550ms ease-out;
+    }
+
+    .card{
+        -webkit-transition: all 250ms ease-in-out;
+        -moz-transition: all 250ms ease-in-out;
+    }
+
+    .player-cards .card,
+    #playground #dealer-cards .card {
+        -webkit-backface-visibility: hidden;
+        background-color: #f9f9f9;
+        -position: absolute;
+        -top: 0;
+        -left: 0;
+
+        --webkit-box-shadow: inset 0 0 1px white,inset 0 0 60px rgba(139,118,109,0.1),0 1px 3px rgba(0,0,15,0.3),0 0 5px rgba(0,0,15,0.1);
+        --ms-box-shadow: inset 0 0 1px white,inset 0 0 60px rgba(139,118,109,0.1),0 1px 3px rgba(0,0,15,0.3),0 0 5px rgba(0,0,15,0.1);
+        -box-shadow: inset 0 0 2px white,inset 0 0 60px rgba(139,118,109,0.1),0 1px 3px rgba(0,0,15,0.3),0 0 5px rgba(0,0,15,0.1);
+    }
+
+    .cards{
+        left:0;
+        min-width:160px;
+    }
+
+    .card.active{
+        z-index:100;
+        cursor:pointer;
+    }
+
+    .white .card:last-child{
+        color:red;
+    }
+
+    .card {
+        font-size: 0.8em;
+        z-index: 1;
+        position: relative;
+        display:inline-block;
+        -float:left;
+        width: 80px;
+        height: 120px;
+        border-radius: 10px;
+        margin:10px;
+        margin-right:-30px;
+        padding:20px;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        opacity:1;
+        box-shadow: 1px 1px 8px rgba(15,43,64,0.5);
+    }
+
+    .card{
+        background-image: url('http://cardsagainsthumanity.com/img/icon_w.png');
+        background-repeat:no-repeat;
+        background-origin:content-box;
+        background-position:center bottom;
+    }
+
+    .black.card{
+        margin-right:10px;
+        margin-left:10px;
+        box-shadow: 3px 3px 8px #000;
+    }
+
+    .card div { -position: absolute }
+    .card div:first-child {
+        top: 2%;
+        left: 5%;
+    }
+
+    .card div .icons>div { position: relative }
+        /*.card .icons {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+        }*/
+    .card{
+        span: 5px;
+        vertical-align:middle;
+    }
+
+    .black.card{
+        background-color:#000 !important;
+        background-image: url('http://cardsagainsthumanity.com/img/icon_b.png');
+        background-repeat:no-repeat;
+        background-origin:content-box;
+        background-position:center bottom;
+        color:#eee;
+        cursor:pointer;
+    }
+
+    #header{
+        height:260px;
+        background-color:#000000;
+
+        background-repeat:no-repeat;
+        background-origin:content-box;
+        background-position:center top;
+        padding:10px;
+        margin-bottom:10px;
+
+        -background-image: -webkit-gradient(radial,50% 50%,0,50% 50%,560,from(#2),to(#000));
+        -background-image: -webkit-radial-gradient(center center,ellipse farthest-corner,#222,#000);
+
+        background-image: url('http://cardsagainsthumanity.com/img/logo.png');
+        opacity:0.85;
+
+        border-bottom:3px solid #132;
+
+        box-shadow: 0 0 10px #111;
+    }
+
+</style>
+</head>
+<body>
+
+<div id="header" style="">
+
+</div>
+{##}
+{#<div class="player-cards">#}
+{#    <div class="card black" style="">#}
+{#        <div class="icons">#}
+{#            What don't you want to find in your Chinese Food?#}
+{#        </div>#}
+{##}
+{#    </div>#}
+{#    <div class="card">#}
+{#        <div class="icons">#}
+{#            Third Base.#}
+{#        </div>#}
+{#    </div>#}
+{#</div>#}
+{##}
+{#<div class="player-cards">#}
+{#    <div class="card black" style="">#}
+{#        <div class="icons">#}
+{#            What don't you want to find in your Chinese Food?#}
+{#        </div>#}
+{##}
+{#    </div>#}
+{#    <div class="card">#}
+{#        <div class="icons">#}
+{#            A middle aged man on roller skates#}
+{#        </div>#}
+{#    </div>#}
+{##}
+{#</div>#}
+<script>
+
+
+</script>
+</body>
+</html>

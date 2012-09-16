@@ -1,0 +1,382 @@
+<html>
+<head>
+<title>Scrolling Cards</title>
+<script src="http://code.jquery.com/jquery-1.8.1.min.js"></script>
+<script type="text/javascript" src="contents.js"></script>
+<script src="http://d3js.org/d3.v2.js"></script>
+<script type="text/javascript">
+    function start(body){
+        body.find(".card:not(.active)").each(function() {$(this).css("-webkit-transform","rotate("+ (7.5-Math.random()*15) +"deg)").css("-moz-transform","rotate("+ (7.5-Math.random()*15) +"deg)").addClass('active');}).mouseover(function(){
+            $(this).css("-webkit-transform","scale(1.2)");
+        }).mouseout(function(){
+                    $(this).css("-webkit-transform","rotate("+ (7.5-Math.random()*15) +"deg)")
+                });
+
+        if (body.attr('gofor') == 'bl'){
+            body.find('.black').css("z-index",10).parent().find('.card:not(.black)').css({'z-index':0,'opacity':0.5});
+        }else{
+            body.find('.card:not(.black)').css("z-index",10).parent().find('.card.black').css({'z-index':0,'opacity':0.5});
+        }
+
+        body.find(".card.black").click(function(){
+            $(this).parent().attr("gofor","bl");
+            $(this).parent().find(".card:not(.black)").css("z-index",0).fadeTo(100,0.5);
+            $(this).css("z-index",1).fadeTo(100,1);
+        });
+        body.find(".card:not(.black)").click(function(){
+            $(this).parent().attr("gofor","wt");
+            $(this).parent().find(".card.black").css("z-index",0).fadeTo(100,0.5);
+            $(this).css("z-index",1).fadeTo(100,1);
+        });
+    }
+
+    function insert(text,cl){
+        if (cl == undefined) cl = 'wt';
+        var html ='<div class="player-cards" gofor="'+cl+'">     <div class="card black" style="">      <textarea class="icons">' + text + '</textarea>     </div>     <div class="card">      <textarea class="icons">' + text +'</textarea>     </div>   </div>';
+        var x = $(html).appendTo($('body'));
+        start(x);
+    }
+
+    function submit(){
+        var z = [];
+        var i = 0;
+        $(".player-cards").each(function(){
+            var c = 'wt';
+            var t = $(this).find('.card:not(.black) textarea')[0].value;
+            if ($(this).attr("gofor") == 'bl'){
+                c = 'bl';
+                t = $(this).find('.black textarea')[0].value;
+            }
+            z[i] = [c,t];
+            i++;
+        });
+        return z;
+    }
+
+    $(document).ready(function(){
+        start($('body'));
+        pullData();
+
+        $(document).keyup(function(e) {
+            if(e.keyCode == 27){
+                // submit
+                var z = submit();
+                var i = 0;
+                for (i=0;i<z.length;i++){
+                    $.post("/cah/update/",{"type":z[i][0],"text":z[i][1]},function(){},'json');
+                }
+            }
+        });
+    });
+
+
+    function pullData(){
+        //@ hackers: Please do not abuse the api key; If you do, we'll sell all the data we have collected on you from FB XD
+        //USA Today (mashery)
+        $.get("http://api.usatoday.com/open/articles/topnews/section",
+                {
+                    section:"news",
+                    count: "2",
+                    days: "30",
+                    page: "0",
+                    encoding: "json",
+                    api_key:"nwszqcvg4xve77cbxdkpx7sz"
+                },USACallBack, "json");
+
+        //NYTimes Most popular
+        $.ajax({
+            url:"http://api.nytimes.com/svc/mostpopular/v2/mostviewed/all-sections/30.jsonp?api-key=de42f654b79192d5069d77eb4bf5bd62:14:66641828",
+            dataType: 'jsonp',
+            jsonpCallback:'NYCallBack'});
+    }
+    function USACallBack(data){
+        temp = data;
+        answers = extractAnswers(sanatizeUSAToday(data));
+        questions = extractQuestions(sanatizeUSAToday(data));
+        var i = 1;
+        for (q in questions){
+            if (i++ > 1) break;
+            insert(questions[q],'bl');
+        }
+        i=1;
+        for(q in answers){
+            if (i++ > 1) break;
+            insert(answers[q], 'wt')
+        }
+    }
+    function NYCallBack(data){
+        temp = data;
+        answers = extractAnswers(sanatizeNYTimes(data));
+        questions = extractQuestions(sanatizeNYTimes(data));
+        var i = 1;
+        for (q in questions){
+            if (i > 1) break;
+            insert(questions[q],'bl');
+            i++;
+        }
+        i = 1;
+        for(q in answers){
+            if (i > 1) break;
+            insert(answers[q], 'wt')
+            i++;
+        }
+    }
+
+    function sanatizeNYTimes(data){
+        var candidates = new Array();
+        j=0;
+        for (i=0; i<data.results.length; i++){
+            candidates[j++] = data.results[i].title;
+            candidates[j++] = data.results[i].abstract;
+        }
+        return candidates;
+    }
+
+    function sanatizeUSAToday(data){
+        var candidates = new Array();
+        j=0;
+        for (i=0; i<data.stories.length; i++){
+            candidates[j++] = data.stories[i].title;
+            candidates[j++] = data.stories[i].description;
+        }
+        return candidates;
+    }
+    //Ideally, this will help identify good questions
+    //EX: Spain is wrestling with woes brought on by reckless spending and lack of economic growth
+    //Turns into : Spain is wrestling with _____ brought on by ______ and ______
+
+    function extractQuestions(candidates){
+//Currently, all we're doing is finding items that have a question mark at the end or has 'and'/'is' in it
+        var questions = new Array();
+        i=0;
+        //regex="/.*(\\?|and|or|has|is).*/";
+        for (candidate in candidates){
+            if ((candidates[candidate].split(" ").length<10)&&(candidates[candidate].match("\\?")!=null||candidates[candidate].match(" and ")!=null||candidates[candidate].match(" has ")!=null||candidates[candidate].match(" is ")!=null||candidates[candidate].match(" or ")!=null||candidates[candidate].match(":")!=null)){
+                questions[i++] = candidates[candidate];
+                //console.log("hit!");
+            }
+        }
+        questions.sort(function() {return 0.5 - Math.random()});
+        return questions;
+    }
+
+
+    function extractAnswers(candidates){
+//Currently, all we're doing is finding items that have a question mark at the end or has 'and'/'is' in it
+        var answers = new Array();
+        i=0;
+        //regex="/.*(\\?|and|or|has|is).*/";
+        for (candidate in candidates){
+            if ((candidates[candidate].split(" ").length<10)&&(!(candidates[candidate].match("\\?")!=null||candidates[candidate].match(" and ")!=null||candidates[candidate].match(" has ")!=null||candidates[candidate].match(" is ")!=null||candidates[candidate].match(" or ")!=null||candidates[candidate].match(":")!=null))){
+                answers[i++] = candidates[candidate];
+                //console.log("hit!");
+            }
+        }
+        answers.sort(function() {return 0.5 - Math.random()});
+        return answers;
+    }
+
+    //Checks for blank; once found, standardize size of blank
+    function validateQuestion(question){
+        /*hasBlank = false;
+         inBlank = false;
+         blankstart = 0;
+         count = 0;
+         for(i=0; i<question.length; i++){
+         if (inBlank&&question.charAt(i)=="_"){
+         count++;
+         }else if (inBlank&&question.charAt(i)!="_"){
+         inBlank = false;
+         if (count<8){
+         question=question.substr(0, blankstart-1)+"_________"+question.substr(i, question.length-i);
+         }
+         }
+         }*/
+        return question.indexOf("_")!=-1;
+    }
+
+</script>
+<style type="text/css">
+    * {
+        margin: 0;
+        padding: 0;
+    }
+    body,
+    html {
+        width: 100%;
+        height: 100%;
+        -webkit-font-smoothing: antialiased;
+        background-color: #0f2d40;
+        background-image: -webkit-gradient(radial,50% 50%,0,50% 50%,560,from(#fff),to(#ffdfad));
+        background-image: -webkit-radial-gradient(center center,ellipse farthest-corner,#fff,#ffdfad);
+        background-image: -moz-radial-gradient(center center,ellipse farthest-corner,#65981e,#184d08);
+        background-image: -ms-radial-gradient(center center,ellipse farthest-corner,#65981e,#184d08);
+        background-attachment:fixed;
+        -overflow: hidden;
+    }
+    .desactivate { opacity: .2 }
+
+    .player-cards{
+        -position: absolute;
+        left: 0%;
+        width: 300px;
+        height: 160px;
+        margin:30px;
+        margin-left:auto;
+        margin-right:auto;
+        --webkit-transform: translate3d(0,0,0);
+        -webkit-transition: all 550ms ease-out;
+        -moz-transition: all 550ms ease-out;
+    }
+
+    .card{
+        -webkit-transition: all 250ms ease-in-out;
+        -moz-transition: all 250ms ease-in-out;
+    }
+
+    .player-cards .card,
+    #playground #dealer-cards .card {
+        -webkit-backface-visibility: hidden;
+        background-color: #f9f9f9;
+        -position: absolute;
+        -top: 0;
+        -left: 0;
+
+        --webkit-box-shadow: inset 0 0 1px white,inset 0 0 60px rgba(139,118,109,0.1),0 1px 3px rgba(0,0,15,0.3),0 0 5px rgba(0,0,15,0.1);
+        --ms-box-shadow: inset 0 0 1px white,inset 0 0 60px rgba(139,118,109,0.1),0 1px 3px rgba(0,0,15,0.3),0 0 5px rgba(0,0,15,0.1);
+        -box-shadow: inset 0 0 2px white,inset 0 0 60px rgba(139,118,109,0.1),0 1px 3px rgba(0,0,15,0.3),0 0 5px rgba(0,0,15,0.1);
+    }
+
+    .cards{
+        left:0;
+        min-width:160px;
+    }
+
+    .card.active{
+        z-index:100;
+        cursor:pointer;
+    }
+
+    .white .card:last-child{
+        color:red;
+    }
+
+    .card {
+        font-size: 0.8em;
+        z-index: 1;
+        position: relative;
+        display:inline-block;
+        -float:left;
+        width: 100px;
+        height: 150px;
+        border-radius: 10px;
+        margin:10px;
+        margin-right:-100px;
+        padding:20px;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        opacity:1;
+        box-shadow: 1px 1px 8px rgba(15,43,64,0.5);
+    }
+
+    .card{
+        background-image: url('http://cardsagainsthumanity.com/img/icon_w.png');
+        background-repeat:no-repeat;
+        background-origin:content-box;
+        background-position:center bottom;
+    }
+
+    .black.card{
+        margin-right:-100px;
+        box-shadow: 3px 3px 8px #000;
+    }
+
+    .card div { -position: absolute }
+    .card textarea:first-child {
+        top: 2%;
+        left: 5%;
+        width:100%;
+        height:100%;
+        text-align:left top;
+
+        border:none;
+        overflow-y:visible;
+
+        outline:none;
+
+        font-size:1em;
+        background-color:#f9f9f9;
+        background-image: url('http://cardsagainsthumanity.com/img/icon_w.png');
+        background-repeat:no-repeat;
+        background-origin:content-box;
+        background-position:center bottom;
+    }
+
+    .card.black textarea:first-child{
+        color:#eee;
+        background-color:#000000;
+        background-image: url('http://cardsagainsthumanity.com/img/icon_b.png');
+
+    }
+
+    .card textarea .icons>div { position: relative }
+        /*.card .icons {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+        }*/
+    .card{
+        span: 5px;
+        vertical-align:middle;
+    }
+
+    .black.card{
+        background-color:#000 !important;
+        background-image: url('http://cardsagainsthumanity.com/img/icon_b.png');
+        background-repeat:no-repeat;
+        background-origin:content-box;
+        background-position:center bottom;
+        color:#eee;
+        cursor:pointer;
+    }
+
+    #header{
+        height:260px;
+        background-color:#000000;
+
+        background-repeat:no-repeat;
+        background-origin:content-box;
+        background-position:center top;
+        padding:10px;
+        margin-bottom:10px;
+
+        -background-image: -webkit-gradient(radial,50% 50%,0,50% 50%,560,from(#2),to(#000));
+        -background-image: -webkit-radial-gradient(center center,ellipse farthest-corner,#222,#000);
+
+        background-image: url('http://cardsagainsthumanity.com/img/logo.png');
+        opacity:0.85;
+
+        border-bottom:3px solid #132;
+
+        box-shadow: 0 0 10px #111;
+    }
+
+</style>
+</head>
+<body>
+
+<div id="header" style="">
+
+</div>
+
+<div class="player-cards" gofor="wt">
+    <div class="card black">
+        <textarea class="icons">What don't you want to find in your Chinese Food?</textarea>
+    </div>
+    <div class="card">
+        <textarea class="icons">What don't you want to find in your Chinese Food?</textarea>
+    </div>
+</div>
+</body>
+</html>
