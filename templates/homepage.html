@@ -18,7 +18,7 @@
             url: "/cah/record/"+0+"/",
             success: function(data){
                 if (data['error'] == undefined){
-                    $('.player-cards').detach();
+                    //$('.player-cards').detach();
                     var i = 0;
                     for (i = 0; i < data['rounds'].length; i++){
                         var round = data['rounds'][i];
