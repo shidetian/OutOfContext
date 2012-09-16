@@ -26,7 +26,8 @@
                         if (round[2] != undefined){
                             var b = round[2][0][1][2];
                             var w = round[2][0][2][2];
-                            rounds[round[0]] = insert_round($(pcs(b,w)),Math.random())
+							if (rounds[round[0]] == undefined)
+                                rounds[round[0]] = insert_round($(pcs(b,w)),Math.random())
                         }
 
                         console.log(round);
