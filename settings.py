@@ -100,7 +100,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
 )
 
-ROOT_URLCONF = 'cardsagainsthumanity.urls'
+ROOT_URLCONF = 'urls'
 
 TEMPLATE_DIRS = ('C:/Users/Lee/PycharmProjects/cardsagainsthumanity/templates',os.path.abspath("./templates"))
 
@@ -121,7 +121,7 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
     # 'django.contrib.admindocs',
-    'cardsagainsthumanity.cah',
+    'cah',
     'facebook'
 )
 
