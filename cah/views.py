@@ -41,7 +41,7 @@ def ping(request, round):
     tp.ping()
 
     # return the full state of the round
-    votes = [(x.user_id.get_profile().get_facebook_profile(), x.white_card1.info(), x.white_card2.info() if x.white_card2 else None) for x in TemporaryVotes.objects.filter(round=round)]
+    votes = [(x.user_id.id, x.white_card1.info(), x.white_card2.info() if x.white_card2 else None) for x in TemporaryVotes.objects.filter(round=round)]
 
     return HttpResponse(dumps({"is_completed":completed, "votes_so_far":votes}))
 
@@ -119,7 +119,7 @@ def wcards(request):
 @csrf_exempt
 def record(request,timestamp):
     # only return those after the timestamp
-    rounds = [(r.id, r.completed, [(v.user_id.get_profile().get_facebook_profile(),v.black_card.info(),v.white_card1.info()) for v in TemporaryVotes.objects.filter(round=r)] or None, Vote.objects.filter(round=r) or None) for r in Round.objects.order_by('time').exclude(time__lt = datetime.datetime.fromtimestamp(float(timestamp)))[:80]]
+    rounds = [(r.id, r.completed, [(v.user_id.id,v.black_card.info(),v.white_card1.info()) for v in TemporaryVotes.objects.filter(round=r)] or None, Vote.objects.filter(round=r) or None) for r in Round.objects.order_by('time').exclude(time__lt = datetime.datetime.fromtimestamp(float(timestamp)))[:80]]
     return HttpResponse(dumps({"rounds":rounds,"timestamp":time.time()}))
 
 @csrf_exempt
@@ -140,9 +140,9 @@ def info(request,timestamp):
             continue
         c0 = round.is_complete()
         c1 = round.completed
-        tv = [(v.user_id.get_profile().get_facebook_profile(),v.white_card1.info()) for v in TemporaryVotes.objects.filter(round=round).order_by('pub_dat').exclude(pub_dat__lt = datetime.datetime.fromtimestamp(float(timestamp)))] or None
+        tv = [(v.user_id.id,v.white_card1.info()) for v in TemporaryVotes.objects.filter(round=round).order_by('pub_dat').exclude(pub_dat__lt = datetime.datetime.fromtimestamp(float(timestamp)))] or None
         av = [(v.white_card1.info()) for v in Vote.objects.filter(round=round)] or None
-        com = [(c.author.get_profile().get_facebook_profile(), c.time) for c in Comment.objects.filter(round=round).order_by('time').exclude(time__lt = datetime.datetime.fromtimestamp(float(timestamp)))]
+        com = [(c.author.id, c.time) for c in Comment.objects.filter(round=round).order_by('time').exclude(time__lt = datetime.datetime.fromtimestamp(float(timestamp)))]
         bundle[round_id] = (c0,c1,tv,av,com)
 
     return HttpResponse(dumps({"bundle":bundle,"timestamp":time.time()}))
