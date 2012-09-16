@@ -119,7 +119,7 @@ def wcards(request):
 @csrf_exempt
 def record(request,timestamp):
     # only return those after the timestamp
-    rounds = [(r.id, r.completed, [(v.user_id.id,v.black_card.info(),v.white_card1.info()) for v in TemporaryVotes.objects.filter(round=r)] or None, Vote.objects.filter(round=r) or None) for r in Round.objects.order_by('time').exclude(time__lt = datetime.datetime.fromtimestamp(float(timestamp)))[:80]]
+    rounds = [(r.id, r.completed, [(v.user_id.id,v.black_card.info(),v.white_card1.info()) for v in TemporaryVotes.objects.filter(round=r)] or None, Vote.objects.filter(round=r) or None) for r in Round.objects.order_by('time').exclude(time__lt = datetime.datetime.fromtimestamp(float(timestamp)))]
     return HttpResponse(dumps({"rounds":rounds,"timestamp":time.time()}))
 
 @csrf_exempt
