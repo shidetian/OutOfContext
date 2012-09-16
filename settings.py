@@ -112,8 +112,8 @@ TEMPLATE_DIRS = ('C:/Users/Lee/PycharmProjects/cardsagainsthumanity/templates',o
 LOGIN_REDIRECT_URL = "/"
 AUTHENTICATION_BACKENDS = ('facebook.backend.FacebookBackend', 'django.contrib.auth.backends.ModelBackend')
 AUTH_PROFILE_MODULE = 'facebook.FacebookProfile'
-FACEBOOK_APP_ID = '267777723263899'#os.environ['FACEBOOK_APP_ID']
-FACEBOOK_APP_SECRET = '30f7d726f90b26b91c9890c9f3fdc252'#os.environ['FACEBOOK_APP_SECRET']
+FACEBOOK_APP_ID = '390394511033147'#os.environ['FACEBOOK_APP_ID']
+FACEBOOK_APP_SECRET = '10093137cbd9017eb3506f21fbfe75dd'#os.environ['FACEBOOK_APP_SECRET']
 FACEBOOK_SCOPE = 'email,publish_stream'
 INSTALLED_APPS = (
     'django.contrib.auth',
