@@ -13,7 +13,7 @@ class Card(models.Model):
         return (self.id,self.question,self.text)
 
     def __str__(self):
-        return "("+str(self.id)+") "+self.text;
+        return "("+str(self.id)+") ";
 
     @classmethod
     def random_question(cls):
